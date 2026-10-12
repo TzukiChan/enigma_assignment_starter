@@ -5,9 +5,35 @@ open Enigma
 let identity = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 let swap_ab = "BACDEFGHIJKLMNOPQRSTUVWXYZ"
 let rotor_I = "EKMFLGDQVZNTOWYHXUSPAIBRCJ"
+let rotor_II = "AJDKSIRUXBLHWTMCQGZNPYFVOE"
 let rotor_III = "BDFHJLCPRTXVZNYEIWGAKMUSQO"
 let refl_B = "YRUHQSLDPXNGOKMIEBFZCWVJAT"
 let refl_C = "FVPJIAOYEDRZXWGCTKUQSBNMHL"
+
+let rot_I = { wiring = rotor_I; turnover = 'Q' }
+let rot_II = { wiring = rotor_II; turnover = 'E' }
+let rot_III = { wiring = rotor_III; turnover = 'V' }
+
+(** [chars_of s] is the list of characters in [s], in order. *)
+let chars_of s = List.init (String.length s) (String.get s)
+
+(** [make_config refl rotors tops plugboard] is a machine with reflector
+    [refl] and [rotors] (left to right), where the i-th rotor starts with
+    the i-th letter of [tops] on top.
+    Requires: [rotors] and [tops] have the same length. *)
+let make_config refl rotors tops plugboard =
+  let oriented =
+    List.map2
+      (fun rotor top_letter -> { rotor; top_letter })
+      rotors (chars_of tops)
+  in
+  { refl; rotors = oriented; plugboard }
+
+(* no rotors, no plugs, identity reflector, should do nothing at all *)
+let do_nothing_machine = make_config identity [] "" []
+
+(* the I-II-III / reflector B setup from the handout *)
+let historical_aaa = make_config refl_B [ rot_I; rot_II; rot_III ] "AAA" []
 
 let index_test name input expected =
   name >:: fun _ ->
@@ -32,6 +58,10 @@ let map_refl_test name wiring input_pos expected =
 let map_plug_test name plugs c expected =
   name >:: fun _ ->
     assert_equal expected (map_plug plugs c) ~printer:(String.make 1)
+
+let cipher_char_test name config c expected =
+  name >:: fun _ ->
+    assert_equal expected (cipher_char config c) ~printer:(String.make 1)
 
 let index_tests = [
   index_test "index of A is 0" 'A' 0;
@@ -92,6 +122,27 @@ let map_plug_tests = [
     [ ('A', 'B'); ('C', 'D'); ('E', 'F') ] 'F' 'E';
 ]
 
+let cipher_char_tests = [
+  cipher_char_test "empty machine maps A to A" do_nothing_machine 'A' 'A';
+  cipher_char_test "empty machine maps Z to Z" do_nothing_machine 'Z' 'Z';
+  cipher_char_test "I-II-III at AAA maps G to P" historical_aaa 'G' 'P';
+  cipher_char_test "I-II-III at AAA maps P back to G" historical_aaa 'P' 'G';
+  cipher_char_test "I-II-III at AAA maps A to U" historical_aaa 'A' 'U';
+  cipher_char_test "I-II-III at AAA maps Z to H" historical_aaa 'Z' 'H';
+  cipher_char_test "I-II-III at AAA maps M to R" historical_aaa 'M' 'R';
+  cipher_char_test "plugboard AZ on I-II-III at AAA maps A to H"
+    { historical_aaa with plugboard = [ ('A', 'Z') ] } 'A' 'H';
+  ("I-II-III at AAA maps the whole alphabet" >:: fun _ ->
+     assert_equal "UEJOBTPZWCNSRKDGVMLFAQIYXH"
+       (String.map (cipher_char historical_aaa) identity)
+       ~printer:Fun.id);
+  ("cipher_char does not move the rotors" >:: fun _ ->
+     (* same letter twice in a row should give the same answer *)
+     let first = cipher_char historical_aaa 'G' in
+     let second = cipher_char historical_aaa 'G' in
+     assert_equal first second ~printer:(String.make 1));
+]
+
 let suite =
   "Enigma test suite" >::: List.flatten [
     index_tests;
@@ -99,6 +150,7 @@ let suite =
     map_l_to_r_tests;
     map_refl_tests;
     map_plug_tests;
+    cipher_char_tests;
   ]
 
 let () = run_test_tt_main suite
