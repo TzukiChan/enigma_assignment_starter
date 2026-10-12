@@ -143,4 +143,4 @@ let implode chars = chars |> List.to_seq |> String.of_seq
 
 let cipher config s = s |> explode |> cipher_chars config |> implode
 
-let hours_worked = 0
+let hours_worked = 8
