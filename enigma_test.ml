@@ -35,6 +35,9 @@ let do_nothing_machine = make_config identity [] "" []
 (* the I-II-III / reflector B setup from the handout *)
 let historical_aaa = make_config refl_B [ rot_I; rot_II; rot_III ] "AAA" []
 
+(* full cipher test setup from section 33 *)
+let fun_az = make_config refl_B [ rot_I; rot_II; rot_III ] "FUN" [ ('A', 'Z') ]
+
 let index_test name input expected =
   name >:: fun _ ->
     assert_equal expected (index input)
@@ -86,6 +89,10 @@ let step_sequence_test name config expected =
     assert_equal expected
       (tops_after_steps config (List.length expected - 1))
       ~printer:(String.concat " ")
+
+let cipher_test name config input expected =
+  name >:: fun _ ->
+    assert_equal expected (cipher config input) ~printer:Fun.id
 
 let index_tests = [
   index_test "index of A is 0" 'A' 0;
@@ -202,6 +209,19 @@ let step_tests = [
     [ "VDP"; "VDQ"; "VER"; "WFS"; "WFT" ];
 ]
 
+let cipher_tests = [
+  cipher_test "empty message stays empty" historical_aaa "" "";
+  cipher_test "empty machine leaves HELLO alone" do_nothing_machine "HELLO"
+    "HELLO";
+  cipher_test "I-II-III at FUN with AZ plug turns YNGXQ into OCAML" fun_az
+    "YNGXQ" "OCAML";
+  cipher_test "I-II-III at AAA turns AAAAA into BDZGO" historical_aaa "AAAAA"
+    "BDZGO";
+  ("cipher steps before the first letter, not after" >:: fun _ ->
+     let expected = String.make 1 (cipher_char (step historical_aaa) 'G') in
+     assert_equal expected (cipher historical_aaa "G") ~printer:Fun.id);
+]
+
 let suite =
   "Enigma test suite" >::: List.flatten [
     index_tests;
@@ -211,6 +231,7 @@ let suite =
     map_plug_tests;
     cipher_char_tests;
     step_tests;
+    cipher_tests;
   ]
 
 let () = run_test_tt_main suite

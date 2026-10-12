@@ -117,7 +117,21 @@ let rec step_rotors is_leftmost rotors =
 
 let step config = { config with rotors = step_rotors true config.rotors }
 
-let cipher _config _s =
-  failwith "Unimplemented"
+(** [cipher_chars config chars] enciphers [chars] one by one, stepping
+    the machine right before each letter and passing the new config on
+    to the rest of the list. *)
+let rec cipher_chars config chars =
+  match chars with
+  | [] -> []
+  | c :: rest ->
+      (* STEP FIRST, cipher second *)
+      let next_config = step config in
+      cipher_char next_config c :: cipher_chars next_config rest
+
+let cipher config s =
+  List.init (String.length s) (String.get s)
+  |> cipher_chars config
+  |> List.to_seq
+  |> String.of_seq
 
 let hours_worked = 0
