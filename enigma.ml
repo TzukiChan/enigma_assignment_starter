@@ -29,8 +29,17 @@ let map_r_to_l wiring top_letter input_pos =
   (* go back to the machine's coordinates *)
   wrap (out_contact - offset)
 
-let map_l_to_r _wiring _top_letter _input_pos =
-  failwith "Unimplemented"
+(** [letter_of_index i] is the uppercase letter at position [i] of the
+    alphabet, basically the opposite of [index].
+    Requires: [i] is in [0] through [25]. *)
+let letter_of_index i = Char.chr (i + Char.code 'A')
+
+let map_l_to_r wiring top_letter input_pos =
+  let offset = index top_letter in
+  let contact = wrap (input_pos + offset) in
+  (* inverse wiring: find which right contact is wired to this letter *)
+  let out_contact = String.index wiring (letter_of_index contact) in
+  wrap (out_contact - offset)
 
 let map_refl _wiring _input_pos =
   failwith "Unimplemented"
