@@ -14,8 +14,7 @@ type config = {
   plugboard : (char * char) list;
 }
 
-let index _c =
-  failwith "Unimplemented"
+let index c = Char.code c - Char.code 'A'
 
 let map_r_to_l _wiring _top_letter _input_pos =
   failwith "Unimplemented"
