@@ -16,8 +16,18 @@ type config = {
 
 let index c = Char.code c - Char.code 'A'
 
-let map_r_to_l _wiring _top_letter _input_pos =
-  failwith "Unimplemented"
+(** [wrap n] is [n] modulo 26, but always in [0] through [25].
+    OCaml's [mod] gives a negative result when [n] is negative, which
+    breaks the rotor math, so we fix it up here. *)
+let wrap n = ((n mod 26) + 26) mod 26
+
+let map_r_to_l wiring top_letter input_pos =
+  let offset = index top_letter in
+  (* which contact on the rotor actually lines up with input_pos *)
+  let contact = wrap (input_pos + offset) in
+  let out_contact = index wiring.[contact] in
+  (* go back to the machine's coordinates *)
+  wrap (out_contact - offset)
 
 let map_l_to_r _wiring _top_letter _input_pos =
   failwith "Unimplemented"
