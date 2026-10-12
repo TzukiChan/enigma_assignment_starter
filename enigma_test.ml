@@ -94,6 +94,14 @@ let cipher_test name config input expected =
   name >:: fun _ ->
     assert_equal expected (cipher config input) ~printer:Fun.id
 
+(** [round_trip_test name config plaintext] checks the reflector symmetry:
+    ciphering the ciphertext again from the same starting [config] gives
+    back [plaintext]. *)
+let round_trip_test name config plaintext =
+  name >:: fun _ ->
+    let ciphertext = cipher config plaintext in
+    assert_equal plaintext (cipher config ciphertext) ~printer:Fun.id
+
 let index_tests = [
   index_test "index of A is 0" 'A' 0;
   index_test "index of Z is 25" 'Z' 25;
@@ -222,6 +230,33 @@ let cipher_tests = [
      assert_equal expected (cipher historical_aaa "G") ~printer:Fun.id);
 ]
 
+(* bigger setup for whole-machine tests: other order, reflector C, lots of
+   plugs, and a start that crosses the double step pretty fast *)
+let busy_machine =
+  make_config refl_C [ rot_III; rot_II; rot_I ] "KDO"
+    [ ('A', 'B'); ('C', 'D'); ('E', 'F'); ('G', 'H'); ('I', 'J');
+      ('K', 'L'); ('M', 'N'); ('O', 'P'); ('Q', 'R'); ('S', 'T');
+      ('U', 'V'); ('W', 'X'); ('Y', 'Z') ]
+
+let whole_machine_tests = [
+  round_trip_test "HELLO round trips on I-II-III at AAA" historical_aaa
+    "HELLO";
+  round_trip_test "HELLO round trips on FUN with AZ plug" fun_az "HELLO";
+  round_trip_test "long message round trips on the busy machine"
+    busy_machine "THEQUICKBROWNFOXJUMPSOVERTHELAZYDOGTHEQUICKBROWNFOX";
+  round_trip_test "single rotor machine round trips"
+    (make_config refl_B [ rot_II ] "D" [ ('H', 'Q') ]) "ATTACKATDAWN";
+  ("no letter ever comes out as itself" >:: fun _ ->
+     let output = cipher historical_aaa (String.make 200 'E') in
+     assert_bool "found an E in the output" (not (String.contains output 'E')));
+  ("ciphertext is as long as the plaintext" >:: fun _ ->
+     assert_equal 26 (String.length (cipher busy_machine identity))
+       ~printer:string_of_int);
+  ("cipher leaves the original config untouched" >:: fun _ ->
+     let _ = cipher historical_aaa "SOMELONGERMESSAGE" in
+     assert_equal "AAA" (tops_of historical_aaa) ~printer:Fun.id);
+]
+
 let suite =
   "Enigma test suite" >::: List.flatten [
     index_tests;
@@ -232,6 +267,7 @@ let suite =
     cipher_char_tests;
     step_tests;
     cipher_tests;
+    whole_machine_tests;
   ]
 
 let () = run_test_tt_main suite
