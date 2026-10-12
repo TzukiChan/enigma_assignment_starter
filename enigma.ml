@@ -16,30 +16,37 @@ type config = {
 
 let index c = Char.code c - Char.code 'A'
 
-(** [wrap n] is [n] modulo 26, but always in [0] through [25].
-    OCaml's [mod] gives a negative result when [n] is negative, which
-    breaks the rotor math, so we fix it up here. *)
-let wrap n = ((n mod 26) + 26) mod 26
-
-let map_r_to_l wiring top_letter input_pos =
-  let offset = index top_letter in
-  (* which contact on the rotor actually lines up with input_pos *)
-  let contact = wrap (input_pos + offset) in
-  let out_contact = index wiring.[contact] in
-  (* go back to the machine's coordinates *)
-  wrap (out_contact - offset)
-
 (** [letter_of_index i] is the uppercase letter at position [i] of the
     alphabet, basically the opposite of [index].
     Requires: [i] is in [0] through [25]. *)
 let letter_of_index i = Char.chr (i + Char.code 'A')
 
-let map_l_to_r wiring top_letter input_pos =
+(** [wrap n] is [n] modulo 26, but always in [0] through [25].
+    OCaml's [mod] gives a negative result when [n] is negative, which
+    breaks the rotor math, so we fix it up here. *)
+let wrap n = ((n mod 26) + 26) mod 26
+
+(** [through_rotor wire top_letter input_pos] is the output position when
+    the signal enters a rotor at [input_pos] while [top_letter] is on top.
+    [wire] maps the contact the signal enters on to the contact it leaves
+    from, both counted as if the rotor were sitting at A.
+    Requires: [top_letter] is in ['A'] through ['Z'] and [input_pos] is in
+    [0] through [25]. *)
+let through_rotor wire top_letter input_pos =
   let offset = index top_letter in
+  (* which contact on the rotor actually lines up with input_pos *)
   let contact = wrap (input_pos + offset) in
+  (* then go back to the machine's coordinates *)
+  wrap (wire contact - offset)
+
+let map_r_to_l wiring top_letter input_pos =
+  through_rotor (fun contact -> index wiring.[contact]) top_letter input_pos
+
+let map_l_to_r wiring top_letter input_pos =
   (* inverse wiring: find which right contact is wired to this letter *)
-  let out_contact = String.index wiring (letter_of_index contact) in
-  wrap (out_contact - offset)
+  through_rotor
+    (fun contact -> String.index wiring (letter_of_index contact))
+    top_letter input_pos
 
 (* reflector never rotates, so it's just a rotor stuck at A *)
 let map_refl wiring input_pos = map_r_to_l wiring 'A' input_pos
@@ -128,10 +135,12 @@ let rec cipher_chars config chars =
       let next_config = step config in
       cipher_char next_config c :: cipher_chars next_config rest
 
-let cipher config s =
-  List.init (String.length s) (String.get s)
-  |> cipher_chars config
-  |> List.to_seq
-  |> String.of_seq
+(** [explode s] is the list of characters in [s], in order. *)
+let explode s = List.init (String.length s) (String.get s)
+
+(** [implode chars] is the string made of [chars], in order. *)
+let implode chars = chars |> List.to_seq |> String.of_seq
+
+let cipher config s = s |> explode |> cipher_chars config |> implode
 
 let hours_worked = 0

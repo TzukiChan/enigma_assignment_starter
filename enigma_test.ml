@@ -40,7 +40,7 @@ let fun_az = make_config refl_B [ rot_I; rot_II; rot_III ] "FUN" [ ('A', 'Z') ]
 
 let index_test name input expected =
   name >:: fun _ ->
-    assert_equal expected (index input)
+    assert_equal expected (index input) ~printer:string_of_int
 
 let map_r_to_l_test name wiring top_letter input_pos expected =
   name >:: fun _ ->
@@ -156,7 +156,8 @@ let map_plug_tests = [
   map_plug_test "plugboard AZ XY still maps A to Z" plugs_az_xy 'A' 'Z';
   map_plug_test "plugboard AZ XY leaves B unchanged" plugs_az_xy 'B' 'B';
   (* order of pairs / letters inside a pair shouldn't matter *)
-  map_plug_test "plugboard YX ZA maps A to Z" [ ('Y', 'X'); ('Z', 'A') ] 'A' 'Z';
+  map_plug_test "plugboard YX ZA maps A to Z"
+    [ ('Y', 'X'); ('Z', 'A') ] 'A' 'Z';
   map_plug_test "plugboard AB CD EF maps F to E"
     [ ('A', 'B'); ('C', 'D'); ('E', 'F') ] 'F' 'E';
 ]
@@ -205,7 +206,8 @@ let step_tests = [
   step_test "two rotors, right one at Q steps the left one"
     (make_config refl_B [ rot_II; rot_I ] "AQ" []) "BR";
   step_test "four rotors, turnover carries through the middle"
-    (make_config refl_B [ rot_III; rot_II; rot_I; rot_III ] "AAQV" []) "ABRW";
+    (make_config refl_B [ rot_III; rot_II; rot_I; rot_III ] "AAQV" [])
+    "ABRW";
   (* rule 3 *)
   step_test "middle rotor only steps once even with two reasons to"
     (make_config refl_B [ rot_I; rot_II; rot_III ] "AEV" []) "BFW";
