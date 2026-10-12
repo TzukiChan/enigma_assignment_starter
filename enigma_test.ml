@@ -29,6 +29,10 @@ let map_refl_test name wiring input_pos expected =
   name >:: fun _ ->
     assert_equal expected (map_refl wiring input_pos) ~printer:string_of_int
 
+let map_plug_test name plugs c expected =
+  name >:: fun _ ->
+    assert_equal expected (map_plug plugs c) ~printer:(String.make 1)
+
 let index_tests = [
   index_test "index of A is 0" 'A' 0;
   index_test "index of Z is 25" 'Z' 25;
@@ -72,12 +76,29 @@ let map_refl_tests = [
   map_refl_test "reflector C maps 25 to 11" refl_C 25 11;
 ]
 
+let plugs_az_xy = [ ('A', 'Z'); ('X', 'Y') ]
+
+let map_plug_tests = [
+  map_plug_test "empty plugboard leaves M unchanged" [] 'M' 'M';
+  map_plug_test "plugboard AZ maps A to Z" [ ('A', 'Z') ] 'A' 'Z';
+  map_plug_test "plugboard AZ maps Z to A" [ ('A', 'Z') ] 'Z' 'A';
+  map_plug_test "plugboard AZ XY maps X to Y" plugs_az_xy 'X' 'Y';
+  map_plug_test "plugboard AZ XY maps Y to X" plugs_az_xy 'Y' 'X';
+  map_plug_test "plugboard AZ XY still maps A to Z" plugs_az_xy 'A' 'Z';
+  map_plug_test "plugboard AZ XY leaves B unchanged" plugs_az_xy 'B' 'B';
+  (* order of pairs / letters inside a pair shouldn't matter *)
+  map_plug_test "plugboard YX ZA maps A to Z" [ ('Y', 'X'); ('Z', 'A') ] 'A' 'Z';
+  map_plug_test "plugboard AB CD EF maps F to E"
+    [ ('A', 'B'); ('C', 'D'); ('E', 'F') ] 'F' 'E';
+]
+
 let suite =
   "Enigma test suite" >::: List.flatten [
     index_tests;
     map_r_to_l_tests;
     map_l_to_r_tests;
     map_refl_tests;
+    map_plug_tests;
   ]
 
 let () = run_test_tt_main suite
