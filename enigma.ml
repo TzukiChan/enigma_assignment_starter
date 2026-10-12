@@ -41,8 +41,8 @@ let map_l_to_r wiring top_letter input_pos =
   let out_contact = String.index wiring (letter_of_index contact) in
   wrap (out_contact - offset)
 
-let map_refl _wiring _input_pos =
-  failwith "Unimplemented"
+(* reflector never rotates, so it's just a rotor stuck at A *)
+let map_refl wiring input_pos = map_r_to_l wiring 'A' input_pos
 
 let map_plug _plugs _c =
   failwith "Unimplemented"

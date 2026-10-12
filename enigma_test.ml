@@ -6,6 +6,8 @@ let identity = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 let swap_ab = "BACDEFGHIJKLMNOPQRSTUVWXYZ"
 let rotor_I = "EKMFLGDQVZNTOWYHXUSPAIBRCJ"
 let rotor_III = "BDFHJLCPRTXVZNYEIWGAKMUSQO"
+let refl_B = "YRUHQSLDPXNGOKMIEBFZCWVJAT"
+let refl_C = "FVPJIAOYEDRZXWGCTKUQSBNMHL"
 
 let index_test name input expected =
   name >:: fun _ ->
@@ -22,6 +24,10 @@ let map_l_to_r_test name wiring top_letter input_pos expected =
     assert_equal expected
       (map_l_to_r wiring top_letter input_pos)
       ~printer:string_of_int
+
+let map_refl_test name wiring input_pos expected =
+  name >:: fun _ ->
+    assert_equal expected (map_refl wiring input_pos) ~printer:string_of_int
 
 let index_tests = [
   index_test "index of A is 0" 'A' 0;
@@ -55,11 +61,23 @@ let map_l_to_r_tests = [
   map_l_to_r_test "rotor I at Z maps 3 back to 25" rotor_I 'Z' 3 25;
 ]
 
+let map_refl_tests = [
+  map_refl_test "identity reflector maps 0 to 0" identity 0 0;
+  map_refl_test "identity reflector maps 1 to 1" identity 1 1;
+  map_refl_test "identity reflector maps 25 to 25" identity 25 25;
+  map_refl_test "reflector B maps 0 to 24" refl_B 0 24;
+  map_refl_test "reflector B maps 24 back to 0" refl_B 24 0;
+  map_refl_test "reflector B maps 5 to 18" refl_B 5 18;
+  map_refl_test "reflector C maps 0 to 5" refl_C 0 5;
+  map_refl_test "reflector C maps 25 to 11" refl_C 25 11;
+]
+
 let suite =
   "Enigma test suite" >::: List.flatten [
     index_tests;
     map_r_to_l_tests;
     map_l_to_r_tests;
+    map_refl_tests;
   ]
 
 let () = run_test_tt_main suite
