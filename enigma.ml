@@ -85,8 +85,37 @@ let cipher_char config c =
   |> letter_of_index
   |> map_plug config.plugboard
 
-let step _config =
-  failwith "Unimplemented"
+(** [next_letter c] is the letter after [c], wrapping ['Z'] around
+    to ['A'].
+    Requires: [c] is in ['A'] through ['Z']. *)
+let next_letter c = letter_of_index (wrap (index c + 1))
+
+(** [rotate orot] is [orot] turned forward by one position. *)
+let rotate orot = { orot with top_letter = next_letter orot.top_letter }
+
+(** [at_turnover orot] is whether [orot] is currently showing its own
+    turnover letter. *)
+let at_turnover orot = orot.top_letter = orot.rotor.turnover
+
+(** [step_rotors is_leftmost rotors] is [rotors] (left to right) after one
+    stepping event. [is_leftmost] tells whether the head of [rotors] is the
+    leftmost rotor of the whole machine, since that one never gets pushed
+    by its own notch. *)
+let rec step_rotors is_leftmost rotors =
+  match rotors with
+  | [] -> []
+  | [ rightmost ] -> [ rotate rightmost ]
+  | current :: (right_neighbor :: _ as rest) ->
+      (* decide everything from the old positions, and each rotor only
+         gets one chance to move here so nothing steps twice *)
+      let should_step =
+        at_turnover right_neighbor
+        || ((not is_leftmost) && at_turnover current)
+      in
+      let current = if should_step then rotate current else current in
+      current :: step_rotors false rest
+
+let step config = { config with rotors = step_rotors true config.rotors }
 
 let cipher _config _s =
   failwith "Unimplemented"

@@ -63,6 +63,30 @@ let cipher_char_test name config c expected =
   name >:: fun _ ->
     assert_equal expected (cipher_char config c) ~printer:(String.make 1)
 
+(** [tops_of config] is the top letters of [config]'s rotors read left to
+    right, e.g. ["KDO"]. *)
+let tops_of config =
+  config.rotors
+  |> List.map (fun { top_letter; _ } -> String.make 1 top_letter)
+  |> String.concat ""
+
+let step_test name config expected_tops =
+  name >:: fun _ ->
+    assert_equal expected_tops (tops_of (step config)) ~printer:Fun.id
+
+(** [tops_after_steps config n] is the top letters of [config] followed by
+    the top letters after each of the next [n] steps.
+    Requires: [n >= 0]. *)
+let rec tops_after_steps config n =
+  if n = 0 then [ tops_of config ]
+  else tops_of config :: tops_after_steps (step config) (n - 1)
+
+let step_sequence_test name config expected =
+  name >:: fun _ ->
+    assert_equal expected
+      (tops_after_steps config (List.length expected - 1))
+      ~printer:(String.concat " ")
+
 let index_tests = [
   index_test "index of A is 0" 'A' 0;
   index_test "index of Z is 25" 'Z' 25;
@@ -143,6 +167,41 @@ let cipher_char_tests = [
      assert_equal first second ~printer:(String.make 1));
 ]
 
+let step_tests = [
+  (* rule 1 *)
+  step_test "rightmost rotor steps every character" historical_aaa "AAB";
+  step_test "single rotor wraps from Z to A"
+    (make_config refl_B [ rot_I ] "Z" []) "A";
+  step_test "single rotor sitting on its turnover only moves itself"
+    (make_config refl_B [ rot_I ] "Q" []) "R";
+  step_test "step with no rotors does nothing" do_nothing_machine "";
+  ("step keeps reflector and plugboard the same" >:: fun _ ->
+     let before = { historical_aaa with plugboard = plugs_az_xy } in
+     let after = step before in
+     assert_equal before.refl after.refl;
+     assert_equal before.plugboard after.plugboard);
+  (* rule 2 *)
+  step_test "rightmost rotor at V turnover steps the middle rotor"
+    (make_config refl_B [ rot_I; rot_II; rot_III ] "AAV" []) "ABW";
+  step_test "middle rotor at E turnover steps itself and the left one"
+    (make_config refl_B [ rot_I; rot_II; rot_III ] "AEA" []) "BFB";
+  step_test "leftmost rotor at its turnover does not step by itself"
+    (make_config refl_B [ rot_I; rot_II; rot_III ] "QAA" []) "QAB";
+  step_test "two rotors, right one at Q steps the left one"
+    (make_config refl_B [ rot_II; rot_I ] "AQ" []) "BR";
+  step_test "four rotors, turnover carries through the middle"
+    (make_config refl_B [ rot_III; rot_II; rot_I; rot_III ] "AAQV" []) "ABRW";
+  (* rule 3 *)
+  step_test "middle rotor only steps once even with two reasons to"
+    (make_config refl_B [ rot_I; rot_II; rot_III ] "AEV" []) "BFW";
+  step_sequence_test "III-II-I from KDO matches handout"
+    (make_config refl_B [ rot_III; rot_II; rot_I ] "KDO" [])
+    [ "KDO"; "KDP"; "KDQ"; "KER"; "LFS"; "LFT"; "LFU" ];
+  step_sequence_test "III-II-I from VDP matches handout"
+    (make_config refl_B [ rot_III; rot_II; rot_I ] "VDP" [])
+    [ "VDP"; "VDQ"; "VER"; "WFS"; "WFT" ];
+]
+
 let suite =
   "Enigma test suite" >::: List.flatten [
     index_tests;
@@ -151,6 +210,7 @@ let suite =
     map_refl_tests;
     map_plug_tests;
     cipher_char_tests;
+    step_tests;
   ]
 
 let () = run_test_tt_main suite
